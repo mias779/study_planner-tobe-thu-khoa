@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Powerpuff Planner MAX 💖</title>
+  <title>Powerpuff Planner FINAL BOSS 💖</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
@@ -11,10 +11,10 @@
 
 <div class="max-w-xl mx-auto mt-6 bg-white/80 backdrop-blur p-5 rounded-3xl shadow-xl text-center">
 
-  <h1 class="text-3xl font-bold mb-2">💖 Powerpuff Planner 💖</h1>
-  <p class="text-sm mb-3">✨ Study like a Powerpuff Girl ✨</p>
+  <h1 class="text-3xl font-bold mb-2">💖 FINAL BOSS PLANNER 💖</h1>
+  <p class="text-sm mb-3">✨ You are THAT girl ✨</p>
 
-  <!-- CHARACTER SELECT -->
+  <!-- THEME -->
   <div class="flex justify-center gap-4 mb-4 text-3xl">
     <button onclick="setTheme('pink')">💗</button>
     <button onclick="setTheme('blue')">💙</button>
@@ -22,7 +22,12 @@
   </div>
 
   <!-- STREAK -->
-  <div class="mb-3">🔥 Streak: <span id="streak">0</span></div>
+  <div class="mb-2">🔥 Streak: <span id="streak">0</span></div>
+
+  <!-- POMODORO -->
+  <div class="mb-3">⏳ <span id="timer">25:00</span>
+    <button onclick="startTimer()">▶</button>
+  </div>
 
   <!-- INPUT -->
   <div class="flex gap-2 mb-4">
@@ -32,14 +37,14 @@
 
   <!-- PROGRESS -->
   <div class="mb-4">
-    <div class="text-sm mb-1">🎮 Tiến độ</div>
+    <div class="text-sm mb-1">🎮 Level</div>
     <div class="w-full bg-gray-200 rounded-full h-4">
       <div id="progressBar" class="h-4 rounded-full transition-all duration-500" style="width:0%"></div>
     </div>
   </div>
 
   <!-- PET -->
-  <div id="pet" class="text-4xl mb-3 animate-bounce">🐰</div>
+  <div id="pet" class="text-5xl mb-3 animate-bounce">🐣</div>
 
   <!-- TASK -->
   <ul id="taskList" class="space-y-2"></ul>
@@ -54,31 +59,22 @@
 
 <script>
 let currentTheme='pink';
-
 function setTheme(color){
-  currentTheme=color;
   const body=document.getElementById('body');
   if(color==='pink') body.className='bg-gradient-to-br from-pink-200 to-purple-200 min-h-screen';
   if(color==='blue') body.className='bg-gradient-to-br from-blue-200 to-cyan-200 min-h-screen';
   if(color==='green') body.className='bg-gradient-to-br from-green-200 to-lime-200 min-h-screen';
 }
 
-function getTasks(){
-  return JSON.parse(localStorage.getItem('tasks')||'[]');
-}
-
-function saveTasks(tasks){
-  localStorage.setItem('tasks',JSON.stringify(tasks));
-}
+function getTasks(){return JSON.parse(localStorage.getItem('tasks')||'[]');}
+function saveTasks(tasks){localStorage.setItem('tasks',JSON.stringify(tasks));}
 
 function addTask(){
   const text=taskInput.value.trim();
   if(!text) return;
-
   const tasks=getTasks();
   tasks.push({text,done:false});
   saveTasks(tasks);
-
   taskInput.value='';
   render();
 }
@@ -86,13 +82,11 @@ function addTask(){
 function render(){
   const list=document.getElementById('taskList');
   list.innerHTML='';
-
   const tasks=getTasks();
   let done=0;
 
   tasks.forEach((task,i)=>{
     if(task.done) done++;
-
     const li=document.createElement('li');
     li.className='flex justify-between items-center bg-white p-3 rounded-2xl shadow hover:scale-105 transition';
 
@@ -100,13 +94,13 @@ function render(){
     span.textContent='🌸 '+task.text;
     if(task.done) span.classList.add('line-through');
 
-    const toggleBtn=document.createElement('button');
-    toggleBtn.textContent=task.done?'↩️':'✔️';
-    toggleBtn.onclick=()=>{
+    const toggle=document.createElement('button');
+    toggle.textContent=task.done?'↩️':'✔️';
+    toggle.onclick=()=>{
       task.done=!task.done;
       saveTasks(tasks);
       render();
-      if(task.done) celebrate();
+      if(task.done) confetti();
     };
 
     const del=document.createElement('button');
@@ -118,7 +112,7 @@ function render(){
     };
 
     li.appendChild(span);
-    li.appendChild(toggleBtn);
+    li.appendChild(toggle);
     li.appendChild(del);
     list.appendChild(li);
   });
@@ -127,22 +121,41 @@ function render(){
   document.getElementById('progressBar').style.width=percent+'%';
 
   const pet=document.getElementById('pet');
-  if(percent===100 && tasks.length>0) pet.textContent='🎉🐰✨';
+  if(percent===100 && tasks.length>0) pet.textContent='🐥➡️🐰➡️🦄';
   else if(percent>50) pet.textContent='🐰💪';
-  else pet.textContent='🐰';
+  else pet.textContent='🐣';
+
+  if(percent===100 && tasks.length>0){
+    let s=parseInt(localStorage.getItem('streak')||0);
+    localStorage.setItem('streak',s+1);
+  }
 
   document.getElementById('streak').textContent=localStorage.getItem('streak')||0;
 }
 
-function celebrate(){
-  alert('🎉 Bạn đỉnh quá!!!');
+// POMODORO
+let time=1500,interval;
+function startTimer(){
+  clearInterval(interval);
+  interval=setInterval(()=>{
+    if(time<=0){alert('🎉 Nghỉ thôi!');time=1500;}
+    time--;
+    let m=Math.floor(time/60),s=time%60;
+    document.getElementById('timer').textContent=`${m}:${s<10?'0'+s:s}`;
+  },1000);
 }
 
+// MUSIC
 let playing=false;
 function toggleMusic(){
   const m=document.getElementById('music');
   if(playing){m.pause();} else {m.play();}
   playing=!playing;
+}
+
+// CONFETTI
+function confetti(){
+  alert('🎉 LEVEL UP!!!');
 }
 
 setTheme('pink');
