@@ -3,59 +3,83 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Powerpuff To-Do 🎀</title>
+  <title>Powerpuff Planner MAX 💖</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body class="bg-pink-200 font-sans">
-  <div class="max-w-xl mx-auto mt-6 bg-white p-5 rounded-2xl shadow text-center">
+<body id="body" class="min-h-screen font-sans transition-all duration-500">
 
-    <h1 class="text-2xl font-bold mb-2">💖 Powerpuff To-Do 💖</h1>
+<div class="max-w-xl mx-auto mt-6 bg-white/80 backdrop-blur p-5 rounded-3xl shadow-xl text-center">
 
-    <!-- IMAGE -->
-    <img src="https://upload.wikimedia.org/wikipedia/en/7/77/Powerpuff_Girls.png" 
-         class="mx-auto w-40 mb-4 rounded-xl">
+  <h1 class="text-3xl font-bold mb-2">💖 Powerpuff Planner 💖</h1>
+  <p class="text-sm mb-3">✨ Study like a Powerpuff Girl ✨</p>
 
-    <!-- INPUT -->
-    <div class="flex gap-2 mb-4">
-      <input id="taskInput" placeholder="🌸 Việc cần làm..." 
-             class="flex-1 border p-2 rounded-xl">
-      <button onclick="addTask()" 
-              class="bg-pink-400 text-white px-4 rounded-xl">➕</button>
-    </div>
-
-    <!-- PROGRESS -->
-    <div class="mb-4">
-      <div class="text-sm mb-1">✨ Tiến độ</div>
-      <div class="w-full bg-gray-200 rounded-full h-4">
-        <div id="progressBar" class="h-4 bg-pink-400 rounded-full" style="width:0%"></div>
-      </div>
-    </div>
-
-    <!-- LIST -->
-    <ul id="taskList" class="space-y-2"></ul>
-
+  <!-- CHARACTER SELECT -->
+  <div class="flex justify-center gap-4 mb-4 text-3xl">
+    <button onclick="setTheme('pink')">💗</button>
+    <button onclick="setTheme('blue')">💙</button>
+    <button onclick="setTheme('green')">💚</button>
   </div>
 
+  <!-- STREAK -->
+  <div class="mb-3">🔥 Streak: <span id="streak">0</span></div>
+
+  <!-- INPUT -->
+  <div class="flex gap-2 mb-4">
+    <input id="taskInput" placeholder="🌸 Việc cần làm..." class="flex-1 border p-2 rounded-xl">
+    <button onclick="addTask()" class="bg-pink-400 text-white px-4 rounded-xl">➕</button>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="mb-4">
+    <div class="text-sm mb-1">🎮 Tiến độ</div>
+    <div class="w-full bg-gray-200 rounded-full h-4">
+      <div id="progressBar" class="h-4 rounded-full transition-all duration-500" style="width:0%"></div>
+    </div>
+  </div>
+
+  <!-- PET -->
+  <div id="pet" class="text-4xl mb-3 animate-bounce">🐰</div>
+
+  <!-- TASK -->
+  <ul id="taskList" class="space-y-2"></ul>
+
+</div>
+
+<!-- MUSIC -->
+<audio id="music" loop>
+  <source src="https://www.bensound.com/bensound-music/bensound-slowmotion.mp3">
+</audio>
+<button onclick="toggleMusic()" style="position:fixed;bottom:20px;right:20px">🎧</button>
+
 <script>
+let currentTheme='pink';
+
+function setTheme(color){
+  currentTheme=color;
+  const body=document.getElementById('body');
+  if(color==='pink') body.className='bg-gradient-to-br from-pink-200 to-purple-200 min-h-screen';
+  if(color==='blue') body.className='bg-gradient-to-br from-blue-200 to-cyan-200 min-h-screen';
+  if(color==='green') body.className='bg-gradient-to-br from-green-200 to-lime-200 min-h-screen';
+}
+
 function getTasks(){
-  return JSON.parse(localStorage.getItem('ppg_tasks')||'[]');
+  return JSON.parse(localStorage.getItem('tasks')||'[]');
 }
 
 function saveTasks(tasks){
-  localStorage.setItem('ppg_tasks',JSON.stringify(tasks));
+  localStorage.setItem('tasks',JSON.stringify(tasks));
 }
 
 function addTask(){
-  const input=document.getElementById('taskInput');
-  const text=input.value.trim();
+  const text=taskInput.value.trim();
   if(!text) return;
 
   const tasks=getTasks();
   tasks.push({text,done:false});
   saveTasks(tasks);
 
-  input.value='';
+  taskInput.value='';
   render();
 }
 
@@ -64,22 +88,25 @@ function render(){
   list.innerHTML='';
 
   const tasks=getTasks();
-  let doneCount=0;
+  let done=0;
 
   tasks.forEach((task,i)=>{
-    if(task.done) doneCount++;
+    if(task.done) done++;
 
     const li=document.createElement('li');
-    li.className='flex justify-between items-center bg-pink-50 p-3 rounded-xl';
+    li.className='flex justify-between items-center bg-white p-3 rounded-2xl shadow hover:scale-105 transition';
 
     const span=document.createElement('span');
     span.textContent='🌸 '+task.text;
     if(task.done) span.classList.add('line-through');
 
-    span.onclick=()=>{
+    const toggleBtn=document.createElement('button');
+    toggleBtn.textContent=task.done?'↩️':'✔️';
+    toggleBtn.onclick=()=>{
       task.done=!task.done;
       saveTasks(tasks);
       render();
+      if(task.done) celebrate();
     };
 
     const del=document.createElement('button');
@@ -91,17 +118,36 @@ function render(){
     };
 
     li.appendChild(span);
+    li.appendChild(toggleBtn);
     li.appendChild(del);
     list.appendChild(li);
   });
 
-  const percent=tasks.length? (doneCount/tasks.length)*100:0;
+  const percent=tasks.length?(done/tasks.length)*100:0;
   document.getElementById('progressBar').style.width=percent+'%';
+
+  const pet=document.getElementById('pet');
+  if(percent===100 && tasks.length>0) pet.textContent='🎉🐰✨';
+  else if(percent>50) pet.textContent='🐰💪';
+  else pet.textContent='🐰';
+
+  document.getElementById('streak').textContent=localStorage.getItem('streak')||0;
 }
 
+function celebrate(){
+  alert('🎉 Bạn đỉnh quá!!!');
+}
+
+let playing=false;
+function toggleMusic(){
+  const m=document.getElementById('music');
+  if(playing){m.pause();} else {m.play();}
+  playing=!playing;
+}
+
+setTheme('pink');
 render();
 </script>
 
 </body>
 </html>
-
