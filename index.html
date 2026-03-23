@@ -12,7 +12,9 @@
 
     <h1 class="text-2xl font-bold text-center mb-2">🎀 Study Planner 🎀</h1>
 
-    <div class="text-center text-3xl mb-2" id="pet">🥚</div>
+    <!-- PET + LEVEL -->
+    <div class="text-center text-3xl mb-1" id="pet">🥚</div>
+    <div class="text-center text-sm mb-2">Level <span id="level">1</span> • EXP <span id="exp">0</span>/100</div>
 
     <div class="text-center mb-3 text-lg">
       🔥 Streak: <span id="streak">0</span>
@@ -31,13 +33,12 @@
           <option>Lý</option>
           <option>Anh</option>
           <option>Văn</option>
-          <option>Địa</option>
         </select>
 
         <select id="priority" class="border p-2 rounded-xl flex-1">
-          <option value="Chưa gấp">🟢</option>
-          <option value="Trung Bình">🟡</option>
-          <option value="GẤP">🔴</option>
+          <option value="1">🟢 Chưa gấp</option>
+          <option value="2">🟡 Trung Bình</option>
+          <option value="3">🔴 GẤP</option>
         </select>
       </div>
 
@@ -63,14 +64,16 @@
 const days = ["T2","T3","T4","T5","T6","T7","CN"];
 let currentDay = days[0];
 
-function getTasks(){
-  return JSON.parse(localStorage.getItem('tasks')||'{}');
-}
+// ===== STORAGE =====
+function getTasks(){ return JSON.parse(localStorage.getItem('tasks')||'{}'); }
+function saveTasks(t){ localStorage.setItem('tasks',JSON.stringify(t)); }
 
-function saveTasks(tasks){
-  localStorage.setItem('tasks',JSON.stringify(tasks));
+function getGame(){
+  return JSON.parse(localStorage.getItem('game')||'{"exp":0,"level":1}');
 }
+function saveGame(g){ localStorage.setItem('game',JSON.stringify(g)); }
 
+// ===== DAYS =====
 function renderDays(){
   const el=document.getElementById('days');
   el.innerHTML='';
@@ -83,20 +86,17 @@ function renderDays(){
   });
 }
 
+// ===== TASK =====
 function addTask(){
-  const text=document.getElementById('taskInput').value.trim();
-  const subject=document.getElementById('subject').value;
-  const priority=document.getElementById('priority').value;
-  const time=document.getElementById('time').value;
-
+  const text=taskInput.value.trim();
   if(!text) return;
 
   const task={
     id: Date.now(),
     text,
-    subject,
-    priority:+priority,
-    time,
+    subject:subject.value,
+    priority:+priority.value,
+    time:time.value,
     done:false
   };
 
@@ -105,7 +105,7 @@ function addTask(){
   tasks[currentDay].push(task);
 
   saveTasks(tasks);
-  document.getElementById('taskInput').value='';
+  taskInput.value='';
   renderTasks();
 }
 
@@ -116,6 +116,7 @@ function toggleDone(id){
   list.forEach(t=>{
     if(t.id===id){
       t.done=!t.done;
+      if(t.done) gainEXP(t.priority);
     }
   });
 
@@ -131,12 +132,40 @@ function deleteTask(id){
   renderTasks();
 }
 
+// ===== GAME SYSTEM =====
+function gainEXP(priority){
+  const g=getGame();
+
+  let add = priority==3?30:priority==2?20:10;
+  g.exp += add;
+
+  if(g.exp>=100){
+    g.exp-=100;
+    g.level++;
+    alert('🎉 LEVEL UP!!!');
+  }
+
+  saveGame(g);
+}
+
+function renderGame(){
+  const g=getGame();
+  document.getElementById('exp').textContent=g.exp;
+  document.getElementById('level').textContent=g.level;
+
+  const pet=document.getElementById('pet');
+  if(g.level<2) pet.textContent='🥚';
+  else if(g.level<4) pet.textContent='🐣';
+  else if(g.level<7) pet.textContent='🐰';
+  else pet.textContent='👑🦄✨';
+}
+
+// ===== RENDER =====
 function renderTasks(){
   const listEl=document.getElementById('taskList');
   listEl.innerHTML='';
 
-  const tasks=(getTasks()[currentDay]||[])
-    .sort((a,b)=>b.priority-a.priority);
+  const tasks=(getTasks()[currentDay]||[]).sort((a,b)=>b.priority-a.priority);
 
   let done=0;
 
@@ -154,7 +183,6 @@ function renderTasks(){
 
     const doneBtn=document.createElement('button');
     doneBtn.textContent = t.done ? '↩' : '✔';
-    doneBtn.title = t.done ? 'Hoàn tác' : 'Hoàn thành';
     doneBtn.onclick=()=>toggleDone(t.id);
 
     const delBtn=document.createElement('button');
@@ -170,20 +198,13 @@ function renderTasks(){
   });
 
   updateStats(done,tasks.length);
+  renderGame();
 }
 
 function updateStats(done,total){
   let percent= total? done/total*100 : 0;
   document.getElementById('progressBar').style.width=percent+'%';
 
-  // PET EVOLUTION
-  const pet = document.getElementById('pet');
-  if(percent===0) pet.textContent='🥚';
-  else if(percent<50) pet.textContent='🐣';
-  else if(percent<100) pet.textContent='🐰';
-  else pet.textContent='🎉🐰✨';
-
-  // STREAK
   if(percent===100 && total>0){
     let today=new Date().toDateString();
     if(localStorage.getItem('last')!==today){
