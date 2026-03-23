@@ -12,27 +12,26 @@
       0%,100%{transform:translateY(0)}
       50%{transform:translateY(-8px)}
     }
-    .dark-mode { background:#1a1a2e; color:white; }
   </style>
 </head>
 
-<body id="body" class="bg-pink-100 font-sans transition-all duration-500">
-  <div class="max-w-2xl mx-auto mt-6 bg-white p-5 rounded-2xl shadow" id="mainBox">
+<body class="bg-pink-100 font-sans transition-all duration-500">
+  <div class="max-w-2xl mx-auto mt-6 bg-white p-5 rounded-2xl shadow">
 
-    <h1 class="text-2xl font-bold text-center mb-2">🎀 Study Game 🎀</h1>
+    <h1 class="text-2xl font-bold text-center mb-2">🎀 Study Planner 🎀</h1>
 
-    <!-- PET -->
     <div class="text-center text-4xl pet-animate" id="pet">🥚</div>
     <div class="text-center text-sm mb-2" id="petMood">Mình mới bắt đầu nè 🥺</div>
 
-    <div class="text-center text-sm mb-2">Level <span id="level">1</span> • EXP <span id="exp">0</span>/100</div>
+    <div class="text-center text-sm mb-2">
+      Level <span id="level">1</span> • EXP <span id="exp">0</span>/100
+    </div>
 
     <div class="text-center mb-3 text-lg">
       🔥 Streak: <span id="streak">0</span>
     </div>
 
-    <button onclick="toggleDarkMode()" class="mb-3 bg-gray-200 px-3 py-1 rounded-xl">🌙 Night Mode</button>
-
+    <!-- DAYS -->
     <div class="flex flex-wrap gap-2 mb-4" id="days"></div>
 
     <div class="grid gap-2 mb-4">
@@ -73,6 +72,26 @@
 const days=["T2","T3","T4","T5","T6","T7","CN"];
 let currentDay=days[0];
 
+// ===== WEEK RESET =====
+function getWeekKey(){
+  const d=new Date();
+  const onejan=new Date(d.getFullYear(),0,1);
+  const week=Math.ceil((((d-onejan)/86400000)+onejan.getDay()+1)/7);
+  return d.getFullYear()+"-W"+week;
+}
+
+function checkReset(){
+  const currentWeek=getWeekKey();
+  const savedWeek=localStorage.getItem("week");
+
+  if(savedWeek!==currentWeek){
+    localStorage.removeItem("game");
+    localStorage.removeItem("stats");
+    localStorage.setItem("week",currentWeek);
+  }
+}
+
+// ===== STORAGE =====
 function getTasks(){return JSON.parse(localStorage.getItem('tasks')||'{}');}
 function saveTasks(t){localStorage.setItem('tasks',JSON.stringify(t));}
 
@@ -82,9 +101,17 @@ function saveGame(g){localStorage.setItem('game',JSON.stringify(g));}
 function getStats(){return JSON.parse(localStorage.getItem('stats')||'{}');}
 function saveStats(s){localStorage.setItem('stats',JSON.stringify(s));}
 
-// DARK MODE
-function toggleDarkMode(){
-  document.getElementById('body').classList.toggle('dark-mode');
+// ===== DAYS UI =====
+function renderDays(){
+  const el=document.getElementById("days");
+  el.innerHTML="";
+  days.forEach(d=>{
+    const btn=document.createElement("button");
+    btn.textContent=d;
+    btn.className="px-3 py-1 rounded "+(d===currentDay?"bg-pink-400 text-white":"bg-gray-200");
+    btn.onclick=()=>{currentDay=d;renderDays();renderTasks();};
+    el.appendChild(btn);
+  });
 }
 
 // TASK
@@ -132,7 +159,7 @@ function gainEXP(priority){
   let add=priority==3?30:priority==2?20:10;
   g.exp+=add;
 
-  if(g.exp>=100){g.exp-=100;g.level++;alert('🎉 LEVEL UP!!!');}
+  if(g.exp>=100){g.exp-=100;g.level++;}
 
   saveGame(g);
 }
@@ -148,7 +175,25 @@ function renderGame(){
   if(g.level<2){pet.textContent='🥚'; mood.textContent='Mới bắt đầu thôi...';}
   else if(g.level<4){pet.textContent='🐣'; mood.textContent='Bạn đang cố gắng đó!';}
   else if(g.level<7){pet.textContent='🌻🐝'; mood.textContent='Bạn là chú ong chăm chỉ!!';}
-  else{pet.textContent='👑🦄'; mood.textContent='Bạn là vua học tập!!';}
+  else{pet.textContent='👑🦄🎀'; mood.textContent='Bạn là vua học tập!!';}
+}
+
+// STREAK FIX
+function updateStreak(done,total){
+  if(total===0) return;
+
+  let percent=done/total*100;
+  let today=new Date().toDateString();
+
+  if(percent===100){
+    if(localStorage.getItem("lastDate")!==today){
+      let s=+(localStorage.getItem("streak")||0);
+      localStorage.setItem("streak",s+1);
+      localStorage.setItem("lastDate",today);
+    }
+  }
+
+  document.getElementById("streak").textContent=localStorage.getItem("streak")||0;
 }
 
 // STATS
@@ -211,12 +256,15 @@ function renderTasks(){
   let percent=tasks.length?done/tasks.length*100:0;
   progressBar.style.width=percent+'%';
 
+  updateStreak(done,tasks.length);
   renderGame();
   renderRanking();
 }
 
+// INIT
+checkReset();
+renderDays();
 renderTasks();
 </script>
 </body>
 </html>
-
