@@ -1,1 +1,270 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Study Planner</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 
+  <style>
+    .pet-animate { animation: bounce 1s infinite; }
+    @keyframes bounce {
+      0%,100%{transform:translateY(0)}
+      50%{transform:translateY(-8px)}
+    }
+  </style>
+</head>
+
+<body class="bg-pink-100 font-sans transition-all duration-500">
+  <div class="max-w-2xl mx-auto mt-6 bg-white p-5 rounded-2xl shadow">
+
+    <h1 class="text-2xl font-bold text-center mb-2">🎀 Study Planner 🎀</h1>
+
+    <div class="text-center text-4xl pet-animate" id="pet">🥚</div>
+    <div class="text-center text-sm mb-2" id="petMood">Mình mới bắt đầu nè 🥺</div>
+
+    <div class="text-center text-sm mb-2">
+      Level <span id="level">1</span> • EXP <span id="exp">0</span>/100
+    </div>
+
+    <div class="text-center mb-3 text-lg">
+      🔥 Streak: <span id="streak">0</span>
+    </div>
+
+    <!-- DAYS -->
+    <div class="flex flex-wrap gap-2 mb-4" id="days"></div>
+
+    <div class="grid gap-2 mb-4">
+      <input id="taskInput" placeholder="💡 Việc cần làm..." class="border p-2 rounded-xl">
+
+      <div class="flex gap-2">
+        <select id="subject" class="border p-2 rounded-xl flex-1">
+          <option>Toán</option>
+          <option>Địa</option>
+          <option>Anh</option>
+          <option>Văn</option>
+        </select>
+
+        <select id="priority" class="border p-2 rounded-xl flex-1">
+          <option value="1">🟢 Chưa gấp</option>
+          <option value="2">🟡 Trung Bình</option>
+          <option value="3">🔴 GẤP</option>
+        </select>
+      </div>
+
+      <button onclick="addTask()" class="bg-pink-400 text-white rounded-xl p-2">➕ Thêm</button>
+    </div>
+
+    <div class="mb-3">
+      <div class="w-full bg-gray-200 rounded-full h-4">
+        <div id="progressBar" class="h-4 rounded-full bg-green-400 transition-all duration-500" style="width:0%"></div>
+      </div>
+    </div>
+
+    <h2 class="font-bold mt-3">📅 Bảng chăm chỉ theo tuần</h2>
+    <ul id="ranking" class="text-sm mb-3"></ul>
+
+    <ul id="taskList" class="space-y-2"></ul>
+
+  </div>
+
+<script>
+const days=["T2","T3","T4","T5","T6","T7","CN"];
+let currentDay=days[0];
+
+// ===== WEEK RESET =====
+function getWeekKey(){
+  const d=new Date();
+  const onejan=new Date(d.getFullYear(),0,1);
+  const week=Math.ceil((((d-onejan)/86400000)+onejan.getDay()+1)/7);
+  return d.getFullYear()+"-W"+week;
+}
+
+function checkReset(){
+  const currentWeek=getWeekKey();
+  const savedWeek=localStorage.getItem("week");
+
+  if(savedWeek!==currentWeek){
+    localStorage.removeItem("game");
+    localStorage.removeItem("stats");
+    localStorage.setItem("week",currentWeek);
+  }
+}
+
+// ===== STORAGE =====
+function getTasks(){return JSON.parse(localStorage.getItem('tasks')||'{}');}
+function saveTasks(t){localStorage.setItem('tasks',JSON.stringify(t));}
+
+function getGame(){return JSON.parse(localStorage.getItem('game')||'{"exp":0,"level":1}');}
+function saveGame(g){localStorage.setItem('game',JSON.stringify(g));}
+
+function getStats(){return JSON.parse(localStorage.getItem('stats')||'{}');}
+function saveStats(s){localStorage.setItem('stats',JSON.stringify(s));}
+
+// ===== DAYS UI =====
+function renderDays(){
+  const el=document.getElementById("days");
+  el.innerHTML="";
+  days.forEach(d=>{
+    const btn=document.createElement("button");
+    btn.textContent=d;
+    btn.className="px-3 py-1 rounded "+(d===currentDay?"bg-pink-400 text-white":"bg-gray-200");
+    btn.onclick=()=>{currentDay=d;renderDays();renderTasks();};
+    el.appendChild(btn);
+  });
+}
+
+// TASK
+function addTask(){
+  const text=taskInput.value.trim();
+  if(!text) return;
+
+  const task={id:Date.now(),text,subject:subject.value,priority:+priority.value,done:false};
+  const tasks=getTasks();
+  if(!tasks[currentDay]) tasks[currentDay]=[];
+  tasks[currentDay].push(task);
+  saveTasks(tasks);
+  taskInput.value='';
+  renderTasks();
+}
+
+function toggleDone(id){
+  const tasks=getTasks();
+  const list=tasks[currentDay]||[];
+
+  list.forEach(t=>{
+    if(t.id===id){
+      t.done=!t.done;
+      if(t.done){
+        gainEXP(t.priority);
+        updateWeeklyStats();
+      }
+    }
+  });
+
+  saveTasks(tasks);
+  renderTasks();
+}
+
+function deleteTask(id){
+  const tasks=getTasks();
+  tasks[currentDay]=(tasks[currentDay]||[]).filter(t=>t.id!==id);
+  saveTasks(tasks);
+  renderTasks();
+}
+
+// GAME
+function gainEXP(priority){
+  const g=getGame();
+  let add=priority==3?30:priority==2?20:10;
+  g.exp+=add;
+
+  if(g.exp>=100){g.exp-=100;g.level++;}
+
+  saveGame(g);
+}
+
+function renderGame(){
+  const g=getGame();
+  level.textContent=g.level;
+  exp.textContent=g.exp;
+
+  const pet=document.getElementById('pet');
+  const mood=document.getElementById('petMood');
+
+  if(g.level<2){pet.textContent='🥚'; mood.textContent='Mới bắt đầu thôi...';}
+  else if(g.level<4){pet.textContent='🐣'; mood.textContent='Bạn đang cố gắng đó!';}
+  else if(g.level<7){pet.textContent='🌻🐝'; mood.textContent='Bạn là chú ong chăm chỉ!!';}
+  else{pet.textContent='👑🦄🎀'; mood.textContent='Bạn là vua học tập!!';}
+}
+
+// STREAK FIX
+function updateStreak(done,total){
+  if(total===0) return;
+
+  let percent=done/total*100;
+  let today=new Date().toDateString();
+
+  if(percent===100){
+    if(localStorage.getItem("lastDate")!==today){
+      let s=+(localStorage.getItem("streak")||0);
+      localStorage.setItem("streak",s+1);
+      localStorage.setItem("lastDate",today);
+    }
+  }
+
+  document.getElementById("streak").textContent=localStorage.getItem("streak")||0;
+}
+
+// STATS
+function updateWeeklyStats(){
+  const s=getStats();
+  const day=new Date().getDay();
+  s[day]=(s[day]||0)+1;
+  saveStats(s);
+}
+
+function renderRanking(){
+  const s=getStats();
+  const el=document.getElementById('ranking');
+  el.innerHTML='';
+
+  Object.keys(s).forEach(d=>{
+    const li=document.createElement('li');
+    li.textContent=`Thứ ${d}: ${s[d]} task`;
+    el.appendChild(li);
+  });
+}
+
+// RENDER
+function renderTasks(){
+  const list=document.getElementById('taskList');
+  list.innerHTML='';
+
+  const tasks=(getTasks()[currentDay]||[]).sort((a,b)=>b.priority-a.priority);
+
+  let done=0;
+
+  tasks.forEach(t=>{
+    if(t.done) done++;
+
+    const li=document.createElement('li');
+    li.className='p-3 rounded-xl flex justify-between bg-pink-50';
+
+    const left=document.createElement('div');
+    left.innerHTML=`${t.priority==3?'🔴':t.priority==2?'🟡':'🟢'} ${t.text}`;
+    if(t.done) left.classList.add('line-through');
+
+    const right=document.createElement('div');
+
+    const doneBtn=document.createElement('button');
+    doneBtn.textContent=t.done?'↩':'✔';
+    doneBtn.onclick=()=>toggleDone(t.id);
+
+    const delBtn=document.createElement('button');
+    delBtn.textContent='❌';
+    delBtn.onclick=()=>deleteTask(t.id);
+
+    right.appendChild(doneBtn);
+    right.appendChild(delBtn);
+
+    li.appendChild(left);
+    li.appendChild(right);
+    list.appendChild(li);
+  });
+
+  let percent=tasks.length?done/tasks.length*100:0;
+  progressBar.style.width=percent+'%';
+
+  updateStreak(done,tasks.length);
+  renderGame();
+  renderRanking();
+}
+
+// INIT
+checkReset();
+renderDays();
+renderTasks();
+</script>
+</body>
+</html>
