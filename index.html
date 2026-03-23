@@ -11,11 +11,11 @@
   <div class="max-w-2xl mx-auto mt-6 bg-white p-5 rounded-2xl shadow">
 
     <h1 class="text-2xl font-bold text-center mb-2">🎀 Study Planner 🎀</h1>
-    <p class="text-center text-sm mb-3">✨ Học chăm mỗi ngày nhaaaa ✨</p>
 
-    <!-- STREAK -->
+    <div class="text-center text-3xl mb-2" id="pet">🥚</div>
+
     <div class="text-center mb-3 text-lg">
-      🔥 Streak: <span id="streak">0</span> ngày
+      🔥 Streak: <span id="streak">0</span>
     </div>
 
     <!-- DAY -->
@@ -31,59 +31,36 @@
           <option>Lý</option>
           <option>Anh</option>
           <option>Văn</option>
-          <option>Địa</option>
         </select>
 
         <select id="priority" class="border p-2 rounded-xl flex-1">
-          <option value="1">🟢 Chưa gấp</option>
-          <option value="2">🟡 Bình thường</option>
-          <option value="3">🔴 Gấp</option>
+          <option value="Chưa gấp">🟢</option>
+          <option value="Trung Bình">🟡</option>
+          <option value="GẤP">🔴</option>
         </select>
       </div>
 
       <input type="time" id="time" class="border p-2 rounded-xl">
 
       <button onclick="addTask()" class="bg-pink-400 text-white rounded-xl p-2">
-        ➕ Thêm nhiệm vụ
+        ➕ Thêm
       </button>
     </div>
 
     <!-- PROGRESS -->
     <div class="mb-3">
-      <div class="text-sm mb-1">🎮 Tiến độ</div>
       <div class="w-full bg-gray-200 rounded-full h-4">
-        <div id="progressBar" class="h-4 rounded-full bg-green-400" style="width:0%"></div>
+        <div id="progressBar" class="h-4 rounded-full bg-green-400 transition-all duration-500" style="width:0%"></div>
       </div>
     </div>
 
-    <!-- PRODUCTIVITY -->
-    <div class="text-center mb-3 text-lg">
-      📊 Năng suất: <span id="productivity">--</span>
-    </div>
-
-    <!-- PET -->
-    <div id="pet" class="text-center text-3xl mb-3">🐰</div>
-
-    <!-- TASK -->
     <ul id="taskList" class="space-y-2"></ul>
 
   </div>
 
 <script>
-const days = ["Thứ 2","Thứ 3","Thứ 4","Thứ 5","Thứ 6","Thứ 7","CN"];
+const days = ["T2","T3","T4","T5","T6","T7","CN"];
 let currentDay = days[0];
-
-function renderDays(){
-  const container = document.getElementById('days');
-  container.innerHTML='';
-  days.forEach(day=>{
-    const btn=document.createElement('button');
-    btn.textContent=day;
-    btn.className='px-3 py-1 rounded-xl '+(day===currentDay?'bg-pink-400 text-white':'bg-gray-200');
-    btn.onclick=()=>{currentDay=day;renderDays();renderTasks();};
-    container.appendChild(btn);
-  });
-}
 
 function getTasks(){
   return JSON.parse(localStorage.getItem('tasks')||'{}');
@@ -93,168 +70,135 @@ function saveTasks(tasks){
   localStorage.setItem('tasks',JSON.stringify(tasks));
 }
 
+function renderDays(){
+  const el=document.getElementById('days');
+  el.innerHTML='';
+  days.forEach(d=>{
+    const b=document.createElement('button');
+    b.textContent=d;
+    b.className='px-3 py-1 rounded '+(d===currentDay?'bg-pink-400 text-white':'bg-gray-200');
+    b.onclick=()=>{currentDay=d;renderDays();renderTasks();};
+    el.appendChild(b);
+  });
+}
+
 function addTask(){
-  const text=taskInput.value.trim();
+  const text=document.getElementById('taskInput').value.trim();
+  const subject=document.getElementById('subject').value;
+  const priority=document.getElementById('priority').value;
+  const time=document.getElementById('time').value;
+
   if(!text) return;
 
   const task={
+    id: Date.now(),
     text,
-    subject:subject.value,
-    priority:priority.value,
-    time:time.value,
+    subject,
+    priority:+priority,
+    time,
     done:false
   };
 
   const tasks=getTasks();
   if(!tasks[currentDay]) tasks[currentDay]=[];
   tasks[currentDay].push(task);
-  saveTasks(tasks);
 
-  taskInput.value='';
+  saveTasks(tasks);
+  document.getElementById('taskInput').value='';
   renderTasks();
 }
 
-function updateStats(tasks){
-  let done=tasks.filter(t=>t.done).length;
-  let total=tasks.length;
+function toggleDone(id){
+  const tasks=getTasks();
+  const list=tasks[currentDay]||[];
 
-  let percent= total?(done/total)*100:0;
-  document.getElementById('progressBar').style.width=percent+'%';
-
-  let text='😴 Chưa học';
-  if(percent>80) text='🌟 Siêu đỉnh';
-  else if(percent>50) text='💪 Tốt';
-  else if(percent>20) text='🙂 Ổn';
-
-  document.getElementById('productivity').textContent=text;
-
-  // PET
-  const pet=document.getElementById('pet');
-  if(percent===100) pet.textContent='🎉🐰✨';
-  else if(percent>50) pet.textContent='🐰💪';
-  else pet.textContent='🐰';
-
-  // STREAK
-  if(percent===100 && total>0){
-    let lastDate=localStorage.getItem('lastDate');
-    let today=new Date().toDateString();
-
-    if(lastDate!==today){
-      let s=parseInt(localStorage.getItem('streak')||0);
-      localStorage.setItem('streak',s+1);
-      localStorage.setItem('lastDate',today);
+  list.forEach(t=>{
+    if(t.id===id){
+      t.done=!t.done;
     }
-  }
+  });
 
-  document.getElementById('streak').textContent=localStorage.getItem('streak')||0;
+  tasks[currentDay]=list;
+  saveTasks(tasks);
+  renderTasks();
+}
+
+function deleteTask(id){
+  const tasks=getTasks();
+  tasks[currentDay]=(tasks[currentDay]||[]).filter(t=>t.id!==id);
+  saveTasks(tasks);
+  renderTasks();
 }
 
 function renderTasks(){
-  const list=document.getElementById('taskList');
-  list.innerHTML='';
+  const listEl=document.getElementById('taskList');
+  listEl.innerHTML='';
 
-  const tasks=getTasks()[currentDay]||[];
+  const tasks=(getTasks()[currentDay]||[])
+    .sort((a,b)=>b.priority-a.priority);
 
-  tasks.forEach((task,i)=>{
+  let done=0;
+
+  tasks.forEach(t=>{
+    if(t.done) done++;
+
     const li=document.createElement('li');
     li.className='p-3 rounded-xl flex justify-between items-center bg-pink-50';
 
     const left=document.createElement('div');
-    left.innerHTML=`📌 <b>[${task.subject}]</b> ${task.text} <br><small>${task.time||''}</small>`;
-    if(task.done) left.classList.add('line-through');
+    left.innerHTML=`${t.priority==3?'🔴':t.priority==2?'🟡':'🟢'} <b>[${t.subject}]</b> ${t.text}<br><small>${t.time||''}</small>`;
+    if(t.done) left.classList.add('line-through');
 
     const right=document.createElement('div');
 
     const doneBtn=document.createElement('button');
-    doneBtn.textContent='✔';
-    doneBtn.onclick=()=>{
-      task.done=!task.done;
-      saveTasks(getTasks());
-      renderTasks();
-    };
+    doneBtn.textContent = t.done ? '↩' : '✔';
+    doneBtn.title = t.done ? 'Hoàn tác' : 'Hoàn thành';
+    doneBtn.onclick=()=>toggleDone(t.id);
 
     const delBtn=document.createElement('button');
     delBtn.textContent='❌';
-    delBtn.onclick=()=>{
-      const all=getTasks();
-      all[currentDay].splice(i,1);
-      saveTasks(all);
-      renderTasks();
-    };
+    delBtn.onclick=()=>deleteTask(t.id);
 
     right.appendChild(doneBtn);
     right.appendChild(delBtn);
 
     li.appendChild(left);
     li.appendChild(right);
-    list.appendChild(li);
-
-    // REMINDER
-    if(task.time && !task.done){
-      const now=new Date();
-      const [h,m]=task.time.split(':');
-      const target=new Date();
-      target.setHours(h,m,0);
-
-      const diff=target-now;
-      if(diff>0 && diff<60000){
-        alert('⏰ Đến giờ: '+task.text);
-      }
-    }
+    listEl.appendChild(li);
   });
 
-  updateStats(tasks);
+  updateStats(done,tasks.length);
+}
+
+function updateStats(done,total){
+  let percent= total? done/total*100 : 0;
+  document.getElementById('progressBar').style.width=percent+'%';
+
+  // PET EVOLUTION
+  const pet = document.getElementById('pet');
+  if(percent===0) pet.textContent='🥚';
+  else if(percent<50) pet.textContent='🐣';
+  else if(percent<100) pet.textContent='🐰';
+  else pet.textContent='🎉🐰✨';
+
+  // STREAK
+  if(percent===100 && total>0){
+    let today=new Date().toDateString();
+    if(localStorage.getItem('last')!==today){
+      let s=+(localStorage.getItem('streak')||0);
+      localStorage.setItem('streak',s+1);
+      localStorage.setItem('last',today);
+    }
+  }
+
+  document.getElementById('streak').textContent=localStorage.getItem('streak')||0;
 }
 
 renderDays();
 renderTasks();
-</script>
-<!-- 🎧 Nhạc chill -->
-<audio id="music" autoplay loop>
-  <source src="https://www.bensound.com/bensound-music/bensound-slowmotion.mp3" type="audio/mpeg">
-</audio>
 
-<button onclick="toggleMusic()" style="position:fixed;bottom:20px;right:20px;background:pink;color:white;padding:10px;border-radius:50%">
-🎧
-</button>
-
-<!-- ⏳ Pomodoro -->
-<div style="position:fixed;bottom:20px;left:20px;background:white;padding:10px;border-radius:10px">
-  ⏳ <span id="timer">25:00</span>
-  <button onclick="startTimer()">▶</button>
-</div>
-
-<script>
-let playing = true;
-function toggleMusic(){
-  const m = document.getElementById('music');
-  if(playing){ m.pause(); } else { m.play(); }
-  playing = !playing;
-}
-
-// POMODORO
-let time = 1500;
-let interval;
-
-function startTimer(){
-  clearInterval(interval);
-  interval = setInterval(()=>{
-    if(time<=0){
-      alert("🎉 Nghỉ ngơi thôi!");
-      time=1500;
-    }
-    time--;
-    let m=Math.floor(time/60);
-    let s=time%60;
-    document.getElementById('timer').textContent=
-      `${m}:${s<10?'0'+s:s}`;
-  },1000);
-}
-
-// 🎉 HIỆU ỨNG
-function celebrate(){
-  alert("🎉 Giỏi quá!!!");
-}
 </script>
 </body>
 </html>
+
