@@ -1,1 +1,107 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Powerpuff To-Do 🎀</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-pink-200 font-sans">
+  <div class="max-w-xl mx-auto mt-6 bg-white p-5 rounded-2xl shadow text-center">
+
+    <h1 class="text-2xl font-bold mb-2">💖 Powerpuff To-Do 💖</h1>
+
+    <!-- IMAGE -->
+    <img src="https://upload.wikimedia.org/wikipedia/en/7/77/Powerpuff_Girls.png" 
+         class="mx-auto w-40 mb-4 rounded-xl">
+
+    <!-- INPUT -->
+    <div class="flex gap-2 mb-4">
+      <input id="taskInput" placeholder="🌸 Việc cần làm..." 
+             class="flex-1 border p-2 rounded-xl">
+      <button onclick="addTask()" 
+              class="bg-pink-400 text-white px-4 rounded-xl">➕</button>
+    </div>
+
+    <!-- PROGRESS -->
+    <div class="mb-4">
+      <div class="text-sm mb-1">✨ Tiến độ</div>
+      <div class="w-full bg-gray-200 rounded-full h-4">
+        <div id="progressBar" class="h-4 bg-pink-400 rounded-full" style="width:0%"></div>
+      </div>
+    </div>
+
+    <!-- LIST -->
+    <ul id="taskList" class="space-y-2"></ul>
+
+  </div>
+
+<script>
+function getTasks(){
+  return JSON.parse(localStorage.getItem('ppg_tasks')||'[]');
+}
+
+function saveTasks(tasks){
+  localStorage.setItem('ppg_tasks',JSON.stringify(tasks));
+}
+
+function addTask(){
+  const input=document.getElementById('taskInput');
+  const text=input.value.trim();
+  if(!text) return;
+
+  const tasks=getTasks();
+  tasks.push({text,done:false});
+  saveTasks(tasks);
+
+  input.value='';
+  render();
+}
+
+function render(){
+  const list=document.getElementById('taskList');
+  list.innerHTML='';
+
+  const tasks=getTasks();
+  let doneCount=0;
+
+  tasks.forEach((task,i)=>{
+    if(task.done) doneCount++;
+
+    const li=document.createElement('li');
+    li.className='flex justify-between items-center bg-pink-50 p-3 rounded-xl';
+
+    const span=document.createElement('span');
+    span.textContent='🌸 '+task.text;
+    if(task.done) span.classList.add('line-through');
+
+    span.onclick=()=>{
+      task.done=!task.done;
+      saveTasks(tasks);
+      render();
+    };
+
+    const del=document.createElement('button');
+    del.textContent='❌';
+    del.onclick=()=>{
+      tasks.splice(i,1);
+      saveTasks(tasks);
+      render();
+    };
+
+    li.appendChild(span);
+    li.appendChild(del);
+    list.appendChild(li);
+  });
+
+  const percent=tasks.length? (doneCount/tasks.length)*100:0;
+  document.getElementById('progressBar').style.width=percent+'%';
+}
+
+render();
+</script>
+
+</body>
+</html>
 
